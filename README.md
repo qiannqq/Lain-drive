@@ -10,6 +10,10 @@
 
 搭配 [Lain-plugin](https://gitee.com/Zyy955/Lain-plugin) 使用，TRSS暂未适配。
 
+未来计划：
+- 支持语音云转码
+- 支持图像压缩
+
 ## 1.安装插件
 
 Gitee：
@@ -21,6 +25,11 @@ git clone --depth=1 https://gitee.com/Zyy955/Lain-drive
 Github：
 ```
 git clone --depth=1 https://github.com/Zyy955/Lain-drive
+```
+
+进入工作目录
+```
+cd Lain-drive
 ```
 
 ## 1.1安装pnpm ，已安装的可以跳过
