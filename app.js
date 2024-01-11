@@ -41,7 +41,7 @@ class Server {
 
       try {
         /** 获取buffer */
-        let buffer = req.file.buffer
+        let { buffer, size, originalname } = req.file
         /** 生成一个临时token */
         const UUID = randomUUID()
         /** 获取文件类型，响应头 */
@@ -52,10 +52,11 @@ class Server {
           status: 'ok',
           buffer,
           File: {
-            size: buffer.length,
+            size,
             extension,
-            contentType,
             token: UUID,
+            originalname,
+            contentType: originalname === 'audio' ? 'audio/silk' : contentType,
             url: Cfg.baseUrl.replace(/\/$/, '') + `/api/File?token=${UUID}`
           }
         }
@@ -117,12 +118,12 @@ class Server {
 
   /** 获取文件后缀和Content-Type */
   async getType (buffer) {
-    const { mime, ext } = await fileTypeFromBuffer(buffer)
     try {
+      const { mime, ext } = await fileTypeFromBuffer(buffer)
       return { extension: ext, contentType: mime }
     } catch (error) {
-      logger.error('获取格式错误，默认返回txt：')
-      logger.error(error)
+      logger.error('获取格式错误，默认返回txt')
+      logger.debug(error)
       return { extension: 'txt', contentType: 'application/octet-stream' }
     }
   }
