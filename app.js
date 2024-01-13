@@ -170,13 +170,14 @@ class Server {
 
     try {
       /** pcm 转 silk */
-      const data = await encodeSilk(fs.readFileSync(pcm), 48000)
+      let data = await encodeSilk(fs.readFileSync(pcm), 48000)
+      data = Buffer.from(data?.data || data)
       logger.mark('pcm => silk 完成!')
       /** 删除初始mp3文件 */
       fs.unlink(mp3, () => { })
       /** 删除pcm文件 */
       fs.unlink(pcm, () => { })
-      return { ok: true, data: data?.data || data }
+      return { ok: true, data }
     } catch (error) {
       return { ok: false, data: error }
     }
