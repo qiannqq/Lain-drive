@@ -29,8 +29,8 @@ class Server {
       const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null
       const Token = req.headers.token || null
       const type = req.headers.type
-      const silk = req.headers.silk
-
+      let silk = req.headers.silk
+      silk = silk === 'undefined' ? undefined : (silk === 'false' ? false : silk)
       if (!req.headers['content-type'].startsWith('multipart/form-data')) {
         logger.error(`[请求格式错误][POST]  [IP：${ip}] => [Token：${Token}] => [返回：已拒绝]`)
         res.status(400).json({ status: 'failed', message: '请求格式错误' })
@@ -157,7 +157,7 @@ class Server {
 
   /** 语音云转码 */
   async getAudio (file) {
-    const _path = './data/'
+    const _path = process.cwd() + '/data/'
     const mp3 = _path + `${Date.now()}.mp3`
     const pcm = _path + `${Date.now()}.pcm`
 
