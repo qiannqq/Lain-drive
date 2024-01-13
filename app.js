@@ -176,7 +176,7 @@ class Server {
       fs.unlink(mp3, () => { })
       /** 删除pcm文件 */
       fs.unlink(pcm, () => { })
-      return { ok: true, data }
+      return { ok: true, data: data?.data || data }
     } catch (error) {
       return { ok: false, data: error }
     }
