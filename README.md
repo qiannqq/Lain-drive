@@ -104,7 +104,7 @@ Bot.videoToUrl = async function (file) {
 
 /** 语音 */
 Bot.audioToUrl = async function (file) {
-  return await uploadFile('audio', file)
+  return await uploadFile('audio', file, true)  // 需要使用云转码就设置参数3为true、铃音暂未适配、等待dev分支适配。
 }
 
 /** 图床 */
@@ -113,14 +113,14 @@ Bot.imageToUrl = async (file) => {
 }
 
 /** 上传文件 */
-async function uploadFile (type, file) {
+async function uploadFile (type, file, silk) {
   file = await Bot.Buffer(file)
   const formData = new FormData()
   formData.append('file', new File([file], type))
   let res = await fetch(url, {
     method: 'POST',
     body: formData,
-    headers: { token }
+    headers: { token, type, silk }
   })
 
   if (res.ok) {

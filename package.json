@@ -15,7 +15,8 @@
     "chokidar": "^3.5.3",
     "yaml": "2.3.4",
     "image-size": "^1.1.1",
-    "multer": "1.4.5-lts.1 "
+    "multer": "1.4.5-lts.1 ",
+    "silk-wasm": "^3.1.1"
   },
   "devDependencies": {
     "eslint": "^8.55.0",

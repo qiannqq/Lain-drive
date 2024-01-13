@@ -1,4 +1,5 @@
-import './lib/init.js'
+import { exec } from 'child_process'
+import { encode as encodeSilk } from 'silk-wasm'
 import { randomUUID } from 'crypto'
 import express from 'express'
 import { fileTypeFromBuffer } from 'file-type'
@@ -7,6 +8,7 @@ import http from 'http'
 import sizeOf from 'image-size'
 import multer from 'multer'
 import Cfg from './lib/config.js'
+import './lib/init.js'
 
 class Server {
   constructor () {
@@ -26,6 +28,8 @@ class Server {
     app.post('/api/upload', upload.single('file'), async (req, res) => {
       const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null
       const Token = req.headers.token || null
+      const type = req.headers.type
+      const silk = req.headers.silk
 
       if (!req.headers['content-type'].startsWith('multipart/form-data')) {
         logger.error(`[请求格式错误][POST]  [IP：${ip}] => [Token：${Token}] => [返回：已拒绝]`)
@@ -44,8 +48,31 @@ class Server {
         let { buffer, size, originalname } = req.file
         /** 生成一个临时token */
         const UUID = randomUUID()
-        /** 获取文件类型，响应头 */
-        const { extension, contentType } = await this.getType(buffer)
+
+        let extension
+        let contentType
+
+        /** 检查请求头，是否为云转码的语音 */
+        if (silk) {
+          const FileAudio = await this.getAudio(buffer)
+          if (FileAudio.ok) {
+            buffer = FileAudio.data
+            extension = 'silk'
+            contentType = 'audio/silk'
+          } else {
+            res.status(500).json({ status: 'failed', message: '云转码失败' })
+            logger.error(`[错误][POST]  [IP：${ip}] => [Token：${Token}] => [返回：云转码失败]`)
+            return logger.error(FileAudio.data)
+          }
+        } else if (type === 'audio') {
+          extension = 'silk'
+          contentType = 'audio/silk'
+        } else {
+          /** 获取文件类型，响应头 */
+          const FileType = await this.getType(buffer)
+          extension = FileType.FileType
+          contentType = FileType.contentType
+        }
 
         /** 先赋值 */
         let data = {
@@ -56,7 +83,7 @@ class Server {
             extension,
             token: UUID,
             originalname,
-            contentType: originalname === 'audio' ? 'audio/silk' : contentType,
+            contentType,
             url: Cfg.baseUrl.replace(/\/$/, '') + `/api/File?token=${UUID}`
           }
         }
@@ -126,6 +153,60 @@ class Server {
       logger.debug(error)
       return { extension: 'txt', contentType: 'application/octet-stream' }
     }
+  }
+
+  /** 语音云转码 */
+  async getAudio (file) {
+    const _path = './data/'
+    const mp3 = _path + `${Date.now()}.mp3`
+    const pcm = _path + `${Date.now()}.pcm`
+
+    /** buffer转mp3 */
+    fs.writeFileSync(mp3, file)
+    /** mp3 转 pcm */
+    await this.runFfmpeg(mp3, pcm)
+    logger.mark('mp3 => pcm 完成!')
+    logger.mark('pcm => silk 进行中!')
+
+    try {
+      /** pcm 转 silk */
+      const data = await encodeSilk(fs.readFileSync(pcm), 48000)
+      logger.mark('pcm => silk 完成!')
+      /** 删除初始mp3文件 */
+      fs.unlink(mp3, () => { })
+      /** 删除pcm文件 */
+      fs.unlink(pcm, () => { })
+      return { ok: true, data }
+    } catch (error) {
+      return { ok: false, data: error }
+    }
+  }
+
+  /** ffmpeg转码 转为pcm */
+  async runFfmpeg (input, output) {
+    let cm
+    let ret = await new Promise((resolve, reject) => exec('ffmpeg -version', { windowsHide: true }, (error, stdout, stderr) => resolve({ error, stdout, stderr })))
+    return new Promise((resolve, reject) => {
+      if (ret.stdout) {
+        cm = 'ffmpeg'
+      } else {
+        cm = Cfg.ffmpeg_path || null
+      }
+
+      if (!cm) {
+        throw new Error('未检测到 ffmpeg ，无法进行转码，请正确配置环境变量或手动前往 config.yaml 进行配置')
+      }
+
+      exec(`${cm} -i "${input}" -f s16le -ar 48000 -ac 1 "${output}"`, async (error, stdout, stderr) => {
+        if (error) {
+          logger.error(`执行错误: ${error}`)
+          reject(error)
+          return
+        }
+        resolve()
+      }
+      )
+    })
   }
 }
 

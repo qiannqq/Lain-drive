@@ -4,3 +4,4 @@ port: 2957                            # HTTP服务器端口
 ExpirationTime: 30                    # 上传文件的过期时间，单位秒，不建议过大
 File404: "./resources/404.png"        # 404路径
 baseUrl: http://127.0.0.1:2957        # 填写公网IP端口
+ffmpeg_path:                          # ffmpeg_path路径，填写绝对路径，如有全局变量可忽略
