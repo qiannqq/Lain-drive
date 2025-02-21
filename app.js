@@ -125,6 +125,7 @@ class Server {
           /** 提取对应的文件 */
           const data = this.File.get(cleanFilename); // 假设 this.File.get 方法只需要文件名
           if (data) {
+            res.setHeader('Connection', 'close')
             res.setHeader('Content-Type', data?.File?.contentType || 'image/png');
             res.setHeader('Content-Disposition', 'inline');
             res.send(data.buffer);
