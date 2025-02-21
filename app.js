@@ -84,7 +84,7 @@ class Server {
             token: UUID,
             originalname,
             contentType,
-            url: Cfg.baseUrl.replace(/\/$/, '') + `/api/File?token=${UUID}`
+            url: Cfg.baseUrl.replace(/\/$/, '') + `/api/File/${UUID}.jpg?token=${Token}`
           }
         }
 
@@ -112,33 +112,36 @@ class Server {
     })
 
     /** Get请求 返回文件 */
-    app.get('/api/File', async (req, res) => {
-      const ip = req.ip
-      const { token } = req.query
-
-      logger.info(`[收到请求][GET] [IP：${ip}] => [Token：${token || JSON.stringify(req.query)}]`)
-
-      try {
-        /** 提取对应的文件 */
-        const data = this.File.get(token)
-        if (data) {
-          res.setHeader('Content-Type', data?.File?.contentType || 'image/png')
-          res.setHeader('Content-Disposition', 'inline')
-          res.send(data.buffer)
-          logger.info(`[请求完成][GET] [IP：${ip}] => [Token：${token}] => [文件：${data?.File?.contentType}]`)
-          logger.debug(data.File)
-        } else {
-          res.setHeader('Content-Type', 'image/png')
-          res.setHeader('Content-Disposition', 'inline')
-          res.send(fs.readFileSync(Cfg.File404))
-          logger.info(`[请求完成][GET] [IP：${ip}] => [Token：${token}] => [文件：${Cfg.File404}]`)
+    app.get('/api/File/:filename', async (req, res) => {
+        const ip = req.ip;
+        const { filename } = req.params;
+      
+        // 去掉文件名中的 ".jpg"
+        const cleanFilename = filename.replace('.jpg', '');
+      
+        logger.info(`[收到请求][GET] [IP：${ip}] => [Filename：${cleanFilename}]`);
+      
+        try {
+          /** 提取对应的文件 */
+          const data = this.File.get(cleanFilename); // 假设 this.File.get 方法只需要文件名
+          if (data) {
+            res.setHeader('Content-Type', data?.File?.contentType || 'image/png');
+            res.setHeader('Content-Disposition', 'inline');
+            res.send(data.buffer);
+            logger.info(`[请求完成][GET] [IP：${ip}] => [文件：${data?.File?.contentType}]`);
+            logger.debug(data.File);
+          } else {
+            res.setHeader('Content-Type', 'image/png');
+            res.setHeader('Content-Disposition', 'inline');
+            res.send(fs.readFileSync(Cfg.File404));
+            logger.info(`[请求完成][GET] [IP：${ip}] => [文件：${Cfg.File404}]`);
+          }
+        } catch (error) {
+          res.status(500).json({ status: 'failed', message: '哎呀，报错了捏' });
+          logger.error(`[未知错误][GET]  [IP：${ip}] => [返回：未知错误]`);
+          logger.error(error);
         }
-      } catch (error) {
-        res.status(500).json({ status: 'failed', message: '哎呀，报错了捏' })
-        logger.error(`[未知错误][GET]  [IP：${ip}] => [Token：${token}] => [返回：未知错误]`)
-        logger.error(error)
-      }
-    })
+    });
 
     http.createServer(app, '0.0.0.0').listen(Cfg.port, () => logger.info(`HTTP服务器已启动：${Cfg.baseUrl || `http://127.0.0.1:${Cfg.port})`}`))
   }
